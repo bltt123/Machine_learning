@@ -11,3 +11,73 @@
 营销与广告：预测用户看到广告后点击的概率（CTR预估），预测客户流失或购买的可能性。
 医疗诊断：根据患者的生理指标（如血压、年龄等），预测其患某种疾病的风险。
 金融反欺诈：判断一笔交易是正常交易还是欺诈交易。
+
+
+
+项目总结：Give Me Some Credit — 信用违约预测（逻辑回归）
+1. 项目背景与业务目标
+业务问题：根据借款人的信用特征（负债率、月收入、逾期次数、信贷账户数等），预测其在未来两年内发生严重逾期（违约）的概率
+问题类型：监督学习中的二分类问题（预测 0/1 概率）
+实际意义：对应银行/互金贷前风控，监管要求模型可解释——逻辑回归是合规首选
+2. 数据理解
+项目	内容
+训练集  150,000 行 × 11 列（10 项特征 + 违约标签）
+测试集  101,503 行 × 10 列（待预测）
+标签分布  违约率仅 6.68% → 严重类别不平衡
+数据质量  MonthlyIncome 缺失约 20%，NumberOfDependents 少量缺失
+
+关键发现（EDA）：
+违约与正常客户在 RevolvingUtilizationOfUnsecuredLines、NumberOfTime30-59DaysPastDueNotWorse 等特征上分布差异明显
+多个特征极度右偏：DebtRatio 最大 32 万、RevolvingUtilization 最大 5 万、MonthlyIncome 最大 300 万，绝大多数样本挤在极小值附近（画出图来"近似竖直线"的原因）
+缺失主要来自收入，属系统性缺失
+3. 数据清洗
+缺失值：MonthlyIncome、NumberOfDependents 用中位数填充（比均值更抗离群值）；关键点是统计量只从训练集计算，防止数据泄漏到测试集
+异常值剪裁（Winsorize）：DebtRatio、RevolvingUtilization、三类逾期次数裁剪到 99 分位，防止极端值主导模型
+年龄合理化：约束到 18–100 岁
+4. 特征工程
+采用风控领域的黄金做法：WOE 分箱 + IV 值筛选
+计算每个特征的 IV（信息量），按"IV ≥ 0.02"保留、弱特征剔除
+最终从 10 个特征中保留 7 个：RevolvingUtilizationOfUnsecuredLines、NumberOfTime30-59DaysPastDueNotWorse、age、DebtRatio、MonthlyIncome、NumberOfOpenCreditLinesAndLoans、NumberOfDependents
+剔除：NumberOfTimes90DaysLate、NumberRealEstateLoansOrLines、NumberOfTime60-89DaysPastDueNotWorse
+5. 建模与验证策略（与房价项目的关键区别）
+没有做多模型对比，而是直接选用逻辑回归 + 类别加权，原因：
+风控场景要求强可解释性
+是评分卡模型的基石，追求稳定的基线
+环节	做法
+特征标准化  StandardScaler（逻辑回归对尺度敏感）
+类别不平衡  class_weight="balanced"（自动加大少数类权重）
+数据划分  train_test_split(stratify=y) 分层切分，保证两折类别比例一致
+交叉验证  分层 5 折（StratifiedKFold），防不平衡偏差
+6. 模型评估（不平衡问题的正确姿势）
+坚决不用准确率（全判正常也有 93% 的"准确率"，毫无意义），采用：
+
+指标	      结果	    含义
+5 折 CV AUC   0.8266   模型排序能力不错
+验证集 AUC    0.8334   高于 0.8 即为较好的风控模型
+KS            0.5152   >0.3 已是优秀区分度
+PR-AUC        0.31     在不平衡下合理的水平
+混淆矩阵      见阈值分析   ——
+业务驱动调优（阈值扫描）：默认 0.5 阈值抓违约 1,498 人/漏 507 人；降到 0.3 能多抓 282 个违约者（漏 225 人），代价是标记高风险人数从 8,135 升到 13,564——这就是风控中"宁可错杀、不可放过"的取舍，可结合业务成本决定。
+系数可解释性：输出每个特征的 Odds 比（exp(系数)），量化"某一特征每增加 1 个标准差，违约几率变化多少倍"，直接可对监管解释。
+
+7. 预测与提交
+在测试集上输出违约概率（而非 0/1，因为线下测评是 AUC，不需要阈值）
+生成 submission.csv：101,503 行，与官方样例一致
+8. 复盘与提升方向
+做得好：围绕不平衡分类打了一套完整的组合拳（加权 → 分层CV → AUC/KS/PR → 阈值调优 → 系数解读），流程是企业级标准 可优化：
+评分卡映射：把概率映射成标准信用分（Score = Offset + Factor·ln(Odds)），更贴近真实风控输出
+正式 WOE 分箱（等频分箱只是近似）
+尝试 SMOTE 过采样、XGBoost/LightGBM 对比
+概率校准（Platt scaling / Isotonic）提升概率的绝对可信度
+
+
+
+
+
+维度	      Give Me Some Credit
+问题类型      二分类（预测违约概率）
+核心难点      类别不平衡、极端离群值、可解释性
+模型策略      Logistic 单模型 + 类别加权
+关键指标      AUC / KS / PR-AUC
+特色技术      WOE/IV 特征筛选、阈值调优、Odds比解读
+业务场景      银行信贷风控

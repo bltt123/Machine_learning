@@ -20,6 +20,21 @@
 - [x] 正则化：Dropout / Weight Decay / Label Smoothing / 早停 → `02` + `03` PartC③（wd 过强会反噬）
 - [x] 损失函数：MSE / CrossEntropy（softmax 数值稳定版）→ `03` PartB（朴素 softmax nan 现场 + log-sum-exp）
 
+## 场景速查（选型指南，数字均来自本家族实测）
+
+| 场景 | 推荐 | 支撑数据 | 指向项目 |
+|---|---|---|---|
+| 线性可分问题 / 教学演示 | 感知机 | Iris 100%（2 轮收敛）；但 XOR 失效 ~56%——线性边界就够时它最便宜 | `01_Perceptron` |
+| 全连接基线（MNIST 级小图） | MLP 784-256-128-10 + Dropout0.2 | MNIST 98.14%；无 Dropout 97.98% 有过拟合信号 | `02_MLP_MNIST` |
+| 优化器选型 | 小任务 SGD+momentum（lr 调对）；大模型/Transformer 用 AdamW | SGD lr 命门：58%→96%；Adam 系自适应但别忘 wd | `03` PartC① |
+| 加速收敛首选组件 | BatchNorm | +1.85pt，14 组消融最大单项 | `03` PartC② |
+| 小 batch / 动态图 / Transformer | LayerNorm / RMSNorm | batch=2 时 BN -21.6pt，LN 无感 | `03` PartE |
+| ReLU 训不动怀疑神经元死亡 | 检查 dead ReLU 或换 GELU/SiLU | 实测 42.3% 激活为零 | `03` PartD |
+| 防过拟合 | Dropout 适度 + wd 适度 | Dropout 0.2 有效；wd 过强 -0.36pt 反噬 | `02` + `03` PartC③ |
+| 分类损失 | CrossEntropy（内置 log-sum-exp） | 朴素 softmax 手写会 nan | `03` PartB |
+
+> 表的用法：先按场景挑推荐项，点开"指向项目"看实测曲线与 FAQ 再定参。
+
 ## 项目规划
 
 | 编号 | 项目 | 覆盖内容 | 数据集 | 关键实验 |

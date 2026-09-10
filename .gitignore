@@ -12,3 +12,5 @@ __pycache__/
 
 # Dataset caches (downloaded locally, never commit)
 data/
+_tmp/
+*.pyc

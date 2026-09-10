@@ -1,7 +1,20 @@
 # 02 CNN 家族：图像分类主干演进
 
-> 主线：LeNet → AlexNet → VGG → Inception → ResNet → DenseNet → MobileNet → EfficientNet → ConvNeXt
-> 每一代都在解决上一代的问题：深度加深 → 梯度消失 → 残差 → 效率 → 现代化。
+> **一句话定位**：视觉的“眼睛”进化史——在 01 地基的“学法”上，加**归纳偏置**（卷积的“图案在哪都一样”）让机器学会“看”。主线 LeNet → ConvNeXt，每一代都在解决上一代的问题：深度加深 → 梯度消失 → 残差 → 效率 → 现代化。
+> 状态：✅ 01-06 六站全部完成（30 图落盘） | 数据：MNIST / Fashion-MNIST / CIFAR-10 | 环境：`LLM_learning`（torch 2.5.1+cpu）
+
+## 通俗理解：给机器装上“会看的眼”
+
+| 阶段 | 通俗说 | 类比 | 家族内落点 |
+| :--- | :--- | :--- | :--- |
+| **LeNet** | CNN 鼻祖：卷积+池化，用更少参数看得更聪明 | 印章：同一图案在哪出现都用同一印章盖 | `01_LeNet_MNIST`：98.88%，参数仅 MLP 的 26.2% |
+| **Alex/VGG** | 加深、加 ReLU/Dropout，堆 3×3 小卷积 | 搭积木：小块多堆比大块一堆更灵活 | `02`：Alex 84.96% 领跑，VGG 无 BN 慢热 |
+| **ResNet** ★ | 残差让深层训得动，越深越值钱 | 抄近路：每层都留直通小抄， gradients 不迷路 | `03`：残差增益 +2.9→+15.4pt；Plain 退化 -9.25pt 复现 |
+| **Dense/Inception** | 拼接收益 vs 多尺度并行 | 通讯录全连 vs 多专家会诊 | `04`：Dense 55% 参数超锚点 +1.63pt，但吞吐 43% |
+| **轻量/Mobile/Eff** | 拆卷积、复合缩放，参数换效率 | 拆大工序为流水线 | `05`：分解 7.9×；α=0.5 以 27% 参数反超 +0.64pt |
+| **ConvNeXt** | 用 Transformer 经验翻新 CNN | 旧房精装：倒瓶颈/DW 改造 | `06`：倒瓶颈 +5.07pt；大核在 32px 小图上 -4.59pt 约束 |
+
+> 整条主线的结论：**归纳偏置省参数（LeNet）→ 残差解深度（ResNet）→ 拆分/缩放换效率（Mobile/Eff）→ 现代工程翻新（ConvNeXt）**——为 03 的下游与 06 的 ViT 铺好“骨干”。
 
 ## 学习目标
 
@@ -24,18 +37,18 @@
 - [x] EfficientNet（复合缩放）→ `05`（EffNet base 51.63% → 宽×2 56.33% → 复合 58.66%；0.20pt/10M 递减，如实呈现 mini 容量限制）
 - [x] ConvNeXt（用 Transformer 经验改造 CNN，为 ViT 对比铺垫）→ `06`（阶梯：DW +3.94pt / 倒瓶颈 +5.07pt / 大核在小图上 -4.59pt 约束；ConvNeXt-mini 3.9M MACs 极端性价比，97 秒每臂）
 
-## 场景速查（选型指南，数字均来自本家族同协议实测）
+## 场景速查（选型指南，数字均来自本家族同协议实测；场景列是人话例子，先看场景再挑推荐）
 
-| 场景 | 推荐 | 支撑数据 | 指向项目 |
+| 场景（能干什么活） | 推荐 | 支撑数据 | 指向项目 |
 |---|---|---|---|
-| 手写数字级小图 / CPU 秒级原型 | LeNet | MNIST 98.88%，61k 参数（MLP 的 26.2%） | `01_LeNet_MNIST` |
-| 28×28 语义分类基线 | AlexNetMini | Fashion-MNIST 84.96% 领跑 | `02_AlexNet_VGG` |
-| CPU 端到端默认 backbone | ResNet20/32（残差必开） | ResNet32 64.88%；残差增益随深度 +2.9→+15.4pt | `03_ResNet_CIFAR10` |
-| 参数预算受限（<60% 参数） | DenseNet | 58.77% @150k（ResNet20 的 55% 参数超锚点 +1.63pt），但吞吐 43% | `04_DenseNet_Inception` |
-| 计算预算受限（MACs<10M） | MobileNet α=0.5 | 54.34% @2.8M MACs（ResNet 的 7%）；且小数据上反超 α=1 +0.64pt | `05_Lightweight` |
-| 多尺度输入 / 降维再卷 | Inception 分支思想 | 轻量两块 39.08% 思想验证；1×1 已成全家族标配 | `04_DenseNet_Inception` |
-| 现代化翻新 / 对齐 Transformer 工程习惯 | ConvNeXt 倒瓶颈形态 | 倒瓶颈臂 58.45% @120k/21.1M；大核+patchify 在 32px 小图负收益——小数据别盲从大核 | `06_ConvNeXt_vs_ViT` |
-| ViT / 注意力主干 | 预留 | 待 `06_Transformer_Vision_Multimodal` 家族同协议回填 | — |
+| 仪表读数/验证码/表单数字：MNIST 级小图、要秒级出结果放手机 CPU | LeNet | MNIST 98.88%，61k 参数（MLP 的 26.2%） | `01_LeNet_MNIST` |
+| 拍衣分类：衬衫/外套这种语义级区分的 28×28 基线 | AlexNetMini | Fashion-MNIST 84.96% 领跑 | `02_AlexNet_VGG` |
+| 做图像分类/检测/分割的"眼睛"骨干，默认就它了 | ResNet20/32（残差必开） | ResNet32 64.88%；残差增益随深度 +2.9→+15.4pt | `03_ResNet_CIFAR10` |
+| 医疗小样本、标注少但想用更少参数追精度 | DenseNet | 58.77% @150k（ResNet20 的 55% 参数超锚点 +1.63pt），但吞吐 43% | `04_DenseNet_Inception` |
+| 算力只有几 M MACs 的手机/端侧芯片上跑 | MobileNet α=0.5 | 54.34% @2.8M MACs（ResNet 的 7%）；且小数据上反超 α=1 +0.64pt | `05_Lightweight` |
+| 同张图里同时要看大目标+小目标（如检测多尺度） | Inception 分支思想 | 轻量两块 39.08% 思想验证；1×1 已成全家族标配 | `04_DenseNet_Inception` |
+| 想用现代工程（倒瓶颈/LN/GELU）翻新 CNN、向 Transformer 对齐 | ConvNeXt 倒瓶颈形态 | 倒瓶颈臂 58.45% @120k/21.1M；大核+patchify 在 32px 小图负收益——小数据别盲从大核 | `06_ConvNeXt_vs_ViT` |
+| 想让模型"按注意力"看图，而非滑窗 | ViT / 注意力主干 | 待 `06_Transformer_Vision_Multimodal` 家族同协议回填 | — |
 
 > 表的用法：先按约束（参数/算力/数据量）挑行，点开"指向项目"看消融曲线与 FAQ 再定参；同协议数字可直接互比（03 起锚点链）。
 

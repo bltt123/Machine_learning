@@ -1,6 +1,20 @@
 # 04 序列模型家族：HMM / CRF / RNN / LSTM / GRU / Seq2Seq / Attention（进阶：SSM/Mamba）
 
-> 这条线解决的是“顺序依赖”的问题。它从传统统计模型一路演化到深度序列模型，再过渡到 Transformer，最终延伸到 SSM/Mamba（现代 RNN 复兴）。
+> **一句话定位**：从“看图”（空间同时看）到“读句”（时间先后看）——图是像素堆一起看，句是字先后看，“我没去”vs“我去没”顺序一反意思全反，所以这家解决“前后依赖”。
+> 状态：✅ 01-03 三站完成（16 图落盘）| 进阶 04 学完 05 后回补 | 数据：toy 中文 NER + 序敏感首尾比较 + 复制/翻转 | 环境：`LLM_learning`（torch 2.5.1+cpu，无外网）
+
+## 通俗理解：怎么让机器“记住前后”
+
+| 阶段 | 通俗说 | 类比 | 家族内落点 |
+| :--- | :--- | :--- | :--- |
+| **HMM/CRF** | 统计的“手拉手”：标签间有转移分，前后自洽 | 7 人手拉手猜词——前一人说 B-PER，后一人就不敢说 I-LOC | `01`：CRF 1.0 vs HMM 0.875，维特比同解码，转移可正可负 |
+| **RNN** | 会传记忆：把上一步记忆传下一步 | 传话游戏：逐人复述 | `02`：T=30 长距消失，长 0.71 vs 短 0.965 Δ0.25 |
+| **LSTM/GRU** | 带笔记本的传话：门控让梯度直通 | 重要写本上 | `02`：门控是序列的残差，GRU 以 76% 参换 0.695 |
+| **Seq2Seq** | 听完整句再吐新句 | 闭卷复述 | `03`：单向量瓶颈压 6 词，复制 10ep 0.867 翻转 0.782 |
+| **Attention** | 边吐边回头看底稿，聚光灯指哪看哪 | 开卷翻译 | `03`：复制对角/翻转反对角热力，对齐可视化 |
+| **Mamba/SSM** | 现代 RNN 复兴：线性复杂度 | 流水线 O(n) vs 全员开会 O(n²) | `05` 后的 04-04 回补 |
+
+> 整条线的结论：**规则手拉手（HMM/CRF）→ 记忆传递（RNN）→ 门控直通（LSTM/GRU）→ 聚光灯（Attention）→ 全注意力（05 Transformer）→ 线性流水线（Mamba）**
 
 ## 学习目标
 
@@ -11,29 +25,51 @@
 
 ## 算法清单（学习检查表）
 
-- [ ] HMM（隐马尔可夫，传统序列生成/解码）
-- [ ] CRF（条件随机场，序列标注经典方法）
-- [ ] RNN
-- [ ] LSTM
-- [ ] GRU
-- [ ] Seq2Seq
-- [ ] Attention（Bahdanau / Luong）
-- [ ] SSM / Mamba（进阶：状态空间模型，选择性扫描 S6；建议**学完 05 后回补**，与 Transformer 形成"线性 vs 二次复杂度"对照）
+- [x] HMM（隐马尔可夫，传统序列生成/解码）→ `01_HMM_CRF_NER`（频率估计+拉普拉斯+Viterbi）
+- [x] CRF（条件随机场，序列标注经典方法）→ `01`（判别式条件似然，前后向配分）
+- [x] RNN → `02_RNN_LSTM_GRU_TextCls`（首尾比较长短对照，长 0.71 短 0.965）
+- [x] LSTM → `02`（门控直通，长短 Δ0.24）
+- [x] GRU → `02`（精简门，76% 参 0.695）
+- [x] Seq2Seq → `03_Seq2Seq_Attention_MT`（编码压句+解码生成，S=6 双 1.0）
+- [x] Attention（Bahdanau 加法式）→ `03`（对角/反对角热力，BOS 移位正确分工）
+- [ ] SSM / Mamba（进阶）→ `04_Mamba_Mini_SSM` **学完 05 后回补**，与 Transformer 线性 vs 二次对照
+
+## 场景速查（选型指南，数字来自本家族实测；场景列是人话例子）
+
+| 场景（能干什么活） | 推荐 | 支撑数据 | 指向项目 |
+|---|---|---|---|
+| 标注一句中谁是人名/地名，数据少、要可解释 | CRF（HMM 为对照） | CRF 1.0 F1 vs HMM 0.875，转移可正可负 | `01_HMM_CRF_NER` |
+| 短句分类（标题/短评 <10 字），先看词袋够不够 | MeanPool/BoW 先试 | 长 T=30 0.47≈随机，短距已够 | `02` |
+| 20~50 字意图/情感，需序但算力紧 | GRU 32 维 | 0.695 @5058 参，LSTM 的 76% 参 | `02` |
+| 需跨 20+ 步记首尾 | LSTM/GRU | 长 0.71 vs 短 0.95 Δ0.25，门控救消失 | `02` |
+| 短句生成（标题改写/短翻译 S≤6） | Seq2Seq+Attention | 双任务 1.0，15k参 | `03` |
+| 需长程重排（翻转/调序） | Attention 必加 | 翻转 10ep 0.782 vs 复制 0.867 慢半拍 | `03` |
+| 长句 S>20 的瓶颈 | Transformer | S=6 已需聚光灯旁路 | `03`→`05` |
+| 线性复杂度长序列 | Mamba/SSM | 待 05 后回补 | — |
+
+> 表的用法：先按句长/任务挑推荐，点开“指向项目”看曲线与 FAQ 再定参；01/02/03 数字同玩具协议可互比。
 
 ## 项目规划
 
 | 编号 | 项目 | 覆盖算法 | 数据集 | 关键实验 |
 |---|---|---|---|---|
 | 01 | `01_HMM_CRF_NER` | HMM, CRF | 小型 NER 数据 / toy corpus | 序列标注对比 |
-| 02 | `02_RNN_LSTM_GRU_TextCls` | RNN, LSTM, GRU | IMDB / 中文情感分类 / THUCNews | 长文本上 RNN vs LSTM vs GRU |
-| 03 | `03_Seq2Seq_Attention_MT` | Seq2Seq, Attention | 小型翻译对 / Tatoeba | Attention 可视化 |
+| 02 | `02_RNN_LSTM_GRU_TextCls` | RNN, LSTM, GRU | 首尾比较 toy（T=30/5） | 长短依赖同台，消失可量化 |
+| 03 | `03_Seq2Seq_Attention_MT` | Seq2Seq, Attention | 复制/翻转 toy（S=6） | 对角/反对角 Attention 热力，BOS 正确分工 |
 | 04 | `04_Mamba_Mini_SSM` | SSM, Mamba | 小语料 LM / 长序列 toy | Mini-Mamba 纯 PyTorch 实现，与 05 的 mini Transformer 对照（速度/内存/效果） |
 
 ## 学习顺序
 
 01 → 02 → 03 →（进阶 04：学完 05 后回补）
 
+## 进度
+
+- ✅ `01_HMM_CRF_NER`（12 句 toy 中文 NER：HMM 0.92 字/0.875 实体 vs CRF 1.0/1.0，6 图；发射/转移热力+Viterbi同解码）
+- ✅ `02_RNN_LSTM_GRU_TextCls`（首尾比较：MeanPool 0.47 随机天花板 / 长 T=30 best 0.71 vs 短 T=5 0.95 Δ0.25 / 4 参数量 226→6658 / 5 图）
+- ✅ `03_Seq2Seq_Attention_MT`（Seq2Seq+Attention：复制 10ep 0.867→60ep 1.0 翻转 0.782→1.0 自回归 6/6 全对，4 图对角/反对角热力，BOS 修复）
+
 ## 与其他家族的关系
 
-- **后续**：05 Transformer 直接继承了 Attention 机制；HMM/CRF 是传统序列标注的思想补充
-- **进阶**：SSM/Mamba 是"现代版 RNN 复兴"，与 05 的 mini Transformer 做架构对照（线性 vs 二次复杂度），建议学完 05 再回补
+- **前置**：02_CNN_Family 的“空间归纳偏置”→ 本家族“时间前后依赖”
+- **后续**：05_Transformer_NLP 直接继承 Attention（Bahdanau→自注意力，循环→并行）
+- **进阶**：04-04 Mamba 是“现代版 RNN 复兴”，与 05 的 mini Transformer 线性 vs 二次复杂度对照，建议学完 05 再回补

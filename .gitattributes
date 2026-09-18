@@ -1,0 +1,11 @@
+# 统一行尾：文本文件入库 LF，Windows 检出 CRLF（消除 phantom M 误报）。
+* text=auto eol=lf
+*.py text eol=lf
+*.md text eol=lf
+*.ipynb text eol=lf
+*.txt text eol=lf
+*.json text eol=lf
+*.png binary
+*.jpg binary
+*.pt binary
+*.bin binary

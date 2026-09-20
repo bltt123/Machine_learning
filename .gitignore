@@ -1,7 +1,6 @@
 # Project-level ignore rules
 AGENTS.md
 package.md
-/README.md
 
 # Python cache
 __pycache__/
@@ -12,5 +11,6 @@ __pycache__/
 
 # Dataset caches (downloaded locally, never commit)
 data/
+weights/
 _tmp/
 *.pyc

@@ -10,26 +10,52 @@
 
 ## 算法清单（学习检查表）
 
-- [ ] Informer（ProbSparse Attention，长序列高效预测）
-- [ ] PatchTST（Patch 化 + Channel Independence，当前时序强基线）
-- [ ] DeepFM（FM + DNN 并联，特征自动交叉）
-- [ ] DIN（Attention 对用户行为序列加权，阿里出品）
-- [ ] Whisper（Encoder-Decoder 语音识别，tiny 版推理为主）
+- [x] Informer（ProbSparse Attention，长序列高效预测）→ `01_TimeSeries_ETT`（ETTh1 真数据：LSTM 0.0936 胜 Informer toy 0.2899；复杂度边界诚实声明）
+- [x] PatchTST（Patch 化 + Channel Independence，当前时序强基线）→ `01`（Patch=16/stride=8：MSE 0.3638；教学简化，非论文 SOTA）
+- [x] DeepFM（FM + DNN 并联，特征自动交叉）→ `02_Recommendation_MovieLens`（test-AUC=0.5607）
+- [x] DIN（Attention 对用户行为序列加权，阿里出品）→ `02`（test-AUC=0.6603；历史增益 +0.0859）
+- [x] Whisper（Encoder-Decoder 语音识别，tiny 版推理为主）→ `03_Whisper_ASR_Experience`（离线 tiny 37.8M：EN WER 0.1786 / ZH 字级 0.5862，forced==auto；真音频）
 
 ## 项目规划
 
 | 编号 | 项目 | 覆盖算法 | 数据集 | 关键实验 |
 |---|---|---|---|---|
-| 01 | `01_TimeSeries_ETT` | Informer, PatchTST | ETT-small（ETTh1）/ 北京 PM2.5 | MSE 对比：LSTM（04 的模型）vs Informer vs PatchTST |
-| 02 | `02_Recommendation_MovieLens` | DeepFM, DIN | MovieLens-100K | AUC 对比：LR/FM 基线 vs DeepFM vs DIN |
-| 03 | `03_Whisper_ASR_Experience` | Whisper | 自备音频 / Common Voice 小样本 | tiny 模型转写体验 + 中文/英文对比（推理为主，可选微调） |
+| 01 | `01_TimeSeries_ETT` | Informer, PatchTST | ETT-small（ETTh1）/ 北京 PM2.5 | MSE 对比：LSTM（04 的模型）vs Informer vs PatchTST | ✅（ETTh1 17,420×8；4 图；LSTM MSE 0.0936） |
+| 02 | `02_Recommendation_MovieLens` | DeepFM, DIN | MovieLens-100K | AUC 对比：LR/FM 基线 vs DeepFM vs DIN | ✅（真数据 100K；DIN 0.6603 vs DeepFM 0.5607；2 图） |
+| 03 | `03_Whisper_ASR_Experience` | Whisper | 自备音频 / Common Voice 小样本 | tiny 模型转写体验 + 中文/英文对比（推理为主，可选微调） | ✅（中英双 WER+频谱；3 图；离线 35s） |
 
 ## 数据集说明
 
-- **ETT-small**：电力变压器温度数据，2 年小时级 7 个特征，GitHub 直接下载（约 7MB），时序预测的标准测试床
-- **北京 PM2.5**：UCI/Kaggle，气象+污染小时数据，适合入门
-- **MovieLens-100K**：10 万评分、1000 用户 × 1700 电影，推荐系统入门标准数据集
-- **语音**：先用几段自己的音频体验 tiny/base 模型；Common Voice 中文子集可选
+> 以下 `data/` 与 `weights/` 均已被 `.gitignore` 忽略（分别约 8MB / 6MB / 1MB / 155MB），不会推送；按下表手动下载放入对应目录即可复跑。
+
+### 01 时序：ETT-small（ETTh1）
+
+| 项 | 内容 |
+|---|---|
+| 下载链接 | https://raw.githubusercontent.com/zhouhaoyi/ETDataset/main/ETT-small/ETTh1.csv |
+| 存放位置 | `09_Domain_Models/01_TimeSeries_ETT/data/ETTh1.csv`（约 2.5MB） |
+| 校验 | 17,420 行；列 `date,HUFL,HULL,MUFL,MULL,LUFL,LULL,OT`；无 NaN；`2016-07-01` 至 `2018-06-26` 小时级 |
+| 备注 | 北京 PM2.5 为规划备选，本轮未使用（ETTh1 已覆盖时序对照目标） |
+
+### 02 推荐：MovieLens-100K
+
+| 项 | 内容 |
+|---|---|
+| 下载链接 | https://files.grouplens.org/datasets/movielens/ml-100k.zip |
+| 存放位置 | 解压到 `09_Domain_Models/02_Recommendation_MovieLens/data/ml-100k/`（约 6MB） |
+| 必需文件 | `u.data` / `u.item` / `u.user` / `u1.base` / `u1.test`（本轮只用这 5 个；其余 `u2~u5/ua/ub` 为官方交叉切分，未使用） |
+| 校验 | 943 用户 / 1682 电影槽位 / 100,000 评分；`u1.base` 80,000 条 / `u1.test` 20,000 条 |
+
+### 03 语音：LibriSpeech 英文 + 自备中文 + Whisper tiny 权重
+
+| 项 | 内容 |
+|---|---|
+| 英文音频 | https://www.openslr.org/resources/12/test-clean.tar.gz（LibriSpeech test-clean；本轮只用 `1089/134686/1089-134686-0000.flac` 10.44s + 同目录 `.trans.txt` 转写；需自转 `ffmpeg -i x.flac -ar 16000 -ac 1 x.wav`） |
+| 中文音频 | 自备 `A7_87.wav`（16k 单声道 9.19s）+ `A7_87.txt`（参考文本 29 字）；Common Voice 备选 https://commonvoice.mozilla.org/zh-CN/datasets（需登录，本轮未使用） |
+| 存放位置 | `09_Domain_Models/03_Whisper_ASR_Experience/data/` |
+| 权重下载页 | https://huggingface.co/openai/whisper-tiny/tree/main（约 155MB） |
+| 存放位置 | `09_Domain_Models/03_Whisper_ASR_Experience/weights/whisper-tiny/`（9 文件缺一不可） |
+| 必需文件 | `config.json` / `generation_config.json` / `preprocessor_config.json` / `tokenizer.json` / `tokenizer_config.json` / `vocab.json` / `merges.txt` / `normalizer.json` / `model.safetensors`（transformers 4.47 慢速 BPE 需要 vocab/merges/normalizer；见 03 README §8） |
 
 ## 与其他家族的关系
 

@@ -49,13 +49,13 @@
 
 | # | 家族 | 状态 | 已完成 | 关键收获（一句话） |
 |---|------|------|--------|-------------------|
-| 01 | RL_Foundations | 🔵 进行中 | 骨架已建 | 贝尔曼是账本；DP 全知、MC 等账单、TD 每天估账 |
-| 02 | DQN_Family | ⬜ 未开始 | — | — |
-| 03 | OnPolicy_PPO | ⬜ 未开始 | — | — |
-| 04 | Continuous_TD3_SAC | ⬜ 未开始 | — | — |
-| 05 | Offline_RL | ⬜ 未开始 | — | — |
-| 06 | RLHF_GRPO_LLM | ⬜ 未开始 | — | — |
-| 07 | Production_Robotics | ⬜ 未开始 | — | — |
+| 01 | RL_Foundations | ✅ 已完成 | 2 站 + common | 贝尔曼是账本；DP 全知、MC 等账单、TD 每天估账；Q 贪心 13 步最优 vs SARSA 17 步安全 |
+| 02 | DQN_Family | ✅ 已完成 | 2 站 + common | target 是稳定器（55 vs 9.3）；Double 最稳 86.3±15.1；Dueling 简单环境方差大 |
+| 03 | OnPolicy_PPO | ✅ 已完成 | 2 站 + common | 基线 +91 eval；PPO clip0.2 以 488.2±3.9 夺冠，KL/clipfrac 双零=收敛 |
+| 04 | Continuous_TD3_SAC | ✅ 已完成 | 2 站 + common | TD3 反超高估小 10 倍；Pendulum 上只有延迟更新明确有益；SAC 熵正则被奖励尺度碾压 |
+| 05 | Offline_RL | ✅ 已完成 | 2 站 + common | BC 天花板=数据质量（31.8→500）；random 上离线 RL 逆袭（BC 31.8 vs IQL 211）；CQL α=0 崩、α=2 稳 |
+| 06 | RLHF_GRPO_LLM | ✅ 已完成 | 2 站 + common | DPO 家族同分 0.9，IPO 最保守；β 是 accuracy-KL 旋钮；GRPO 组基线省 critic，G=2 最差 |
+| 07 | Production_Robotics | ✅ 已完成 | 2 站（01 实跑 + 02 阅读级） | SB3 交叉验证手写 DQN 通过（167.8≈177.9）；PPO 落后在调参；工具链按规模选 |
 
 > 状态标记：⬜ 未开始 / 🔵 进行中 / ✅ 已完成
 

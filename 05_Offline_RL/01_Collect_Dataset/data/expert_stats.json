@@ -1,0 +1,10 @@
+{
+  "policy": "expert",
+  "env_id": "CartPole-v1",
+  "n_transitions": 20000,
+  "n_episodes": 40,
+  "mean_return": 500.0,
+  "std_return": 0.0,
+  "mean_ep_len": 500.0,
+  "action_frac_1": 0.4997
+}

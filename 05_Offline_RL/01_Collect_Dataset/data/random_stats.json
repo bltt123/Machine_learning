@@ -1,0 +1,10 @@
+{
+  "policy": "random",
+  "env_id": "CartPole-v1",
+  "n_transitions": 20006,
+  "n_episodes": 887,
+  "mean_return": 22.55467869222097,
+  "std_return": 11.644639552526336,
+  "mean_ep_len": 22.55467869222097,
+  "action_frac_1": 0.5008497450764771
+}
